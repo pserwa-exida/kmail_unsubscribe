@@ -1,12 +1,10 @@
 # Unsubscribe for KMail
 
-Adds one Unsubscribe button to KMail and Kontact. It works with one message or
-many selected messages at once, combining authenticated
+Adds an **Unsubscribe** action to KMail and Kontact. It works with one message or
+**multiple selected messages at once**, combining authenticated
 [RFC 8058](https://www.rfc-editor.org/rfc/rfc8058.html) one-click requests,
 browser links, and unsubscribe emails. One confirmation shows what will happen
-for every message and can move successfully unsubscribed messages to Trash.
-
-![KMail unsubscribe confirmation showing the method sequence and delete-after-success option](docs/images/unsubscribe-confirmation.png)
+for every message. By default, successfully unsubscribed messages move to Trash.
 
 ## Install on Fedora 44
 
@@ -62,21 +60,78 @@ sudo cmake --install build
 
 ## Usage
 
-**Unsubscribe** is a single action in the toolbar and message context menus. Select several messages to unsubscribe from several mailing lists with one confirmation. The action also appears above the From/To header in the message preview and separate message window. In the **Smart with Clickable Status** message-list theme, each message has one unsubscribe icon beside the existing controls in its Status column. Other themes retain the toolbar, menu, and preview actions.
+### 1. Check the Status column
+
+In the **Smart with Clickable Status** message-list theme, each message has an
+unsubscribe icon in its **Status** column. The icon shows which methods are
+available:
+
+- **Red with a gold lightning badge:** verified one-click unsubscribe is available.
+- **Red:** regular web or email unsubscribe is available.
+- **Disabled gray:** no unsubscribe method is available.
+
+![KMail message list showing available and disabled unsubscribe icons in the Status column](docs/images/unsubscribe-status-icons.png)
+
+Other message-list themes retain the toolbar, menu, and preview actions.
+
+### 2. Select one or multiple messages
+
+Select one message or **multiple messages at once** in the message list to
+unsubscribe from several mailing lists with one confirmation.
+
+![Two selected messages with arrows pointing to their Status icons and a tooltip confirming that verified one-click unsubscribe is available](docs/images/unsubscribe-multiple-messages.png)
+
+### 3. Start unsubscribing
+
+- **One message:** click its unsubscribe icon in the **Status** column.
+- **Multiple messages:** select the messages, then **right-click > Unsubscribe**.
+
+The toolbar's **Unsubscribe** action also works on all selected messages. The
+action above the From/To header in the message preview or a separate message
+window acts on that message only, just like its Status icon.
+
+### 4. Review and confirm
+
+The confirmation dialog lists every selected message's subject and unsubscribe
+method sequence. Review the messages, then click **Unsubscribe** to proceed.
+**Cancel** stops the entire operation before any unsubscribe request is sent;
+use it to return to the message list and change your selection.
+
+**Delete after successful unsubscribe** is checked by default and applies to
+the whole selection. After a successful one-click response or a successfully
+sent unsubscribe email, the original message moves to Trash. Uncheck the box
+to keep the messages.
+
+![Confirmation for two selected messages showing their unsubscribe method sequences and the checked Delete after successful unsubscribe option](docs/images/unsubscribe-confirmation.png)
+
+### 5. Review the results
+
+The plugin automatically chooses the best available method for each message,
+starting with **verified RFC 8058 one-click**, then **Web**, then **Email**.
+A rejected one-click request falls back to the web page; if KMail cannot open
+that page, it falls back to a valid unsubscribe email address.
+
+When a one-click request is sent, a fallback is used, or a failure occurs, a
+result summary shows what succeeded and what needs attention. Moves to Trash
+are reported separately from unsubscribe failures. Other selected messages
+continue processing if one fails.
+
+If a website or email composer opens, finish the unsubscribe process there.
+Opening a browser page or leaving an unsent draft does not confirm an
+unsubscribe or delete the original message. Failed and skipped messages are
+also kept.
+
+## Unsubscribe behavior
 
 In the message-list context menu, Unsubscribe is a direct entry with an icon. It replaces KMail's native email/web unsubscribe entries. The mailing-list submenu remains only when it contains other commands, such as Help or Archive.
 
-The toolbar and list context menu act on all selected messages. The preview and row buttons act on their own message. Both use the same confirmation:
+Messages without an available method, including messages that could not be loaded, are marked as skipped in the confirmation. If no method remains after fetching the selected messages again, the plugin shows an error.
 
-- The plugin prepares each message's method sequence in this order: **verified RFC 8058 one-click**, then **Web**, then **Email**.
-- One confirmation lists every selected message's subject and method sequence, with **Unsubscribe** and **Cancel**. If no method remains after fetching the selected messages again, it shows an error.
-- Messages without an available method, including messages that could not be loaded, are marked as skipped. **Cancel stops the entire operation**, including one-click requests.
-- After confirmation, it tries that sequence for each message. A rejected one-click request falls back to the web page; if KMail cannot open that page, it falls back to a valid unsubscribe email address.
-- **Delete after successful unsubscribe** is checked by default and applies to the whole selection. After a successful one-click response or a successfully sent unsubscribe email, the original message moves to the account's Trash folder (or KMail's local Trash if the account uses it). Messages already in Trash stay there. Failed or skipped messages, browser pages, and unsent drafts do not trigger deletion. Uncheck the box to keep all messages. The one-click result summary reports moves to Trash separately from unsubscribe failures; email cleanup happens after KMail confirms sending.
+Deleted messages move to the account's Trash folder (or KMail's local Trash if the account uses it). Messages already in Trash stay there. Email cleanup happens only after KMail confirms sending.
 
 Quick preparation goes straight to the confirmation. A cancelable “Checking unsubscribe methods…” dialog appears only when preparation lasts longer than 0.8 seconds.
 
-The icon is red with a gold lightning badge when verified one-click is available, red when only regular web or email unsubscribe is available, and disabled gray when no method is available. Each preview or row icon reflects its own message. For a selection, the toolbar and menu action are enabled if any selected message has a method, and show the gold badge if any has verified one-click. Headers are fetched explicitly because KMail's message-list envelopes omit unsubscribe headers even when they report a loaded header payload. One-click checks run asynchronously, and clicking the action fetches and validates the selected messages again before asking for confirmation. Requests run sequentially after confirmation, with one result summary when KMail sends a one-click request, uses a fallback, or encounters a failure.
+Each preview or row icon reflects its own message. For a selection, the toolbar and menu action are enabled if any selected message has a method, and show the gold badge if any has verified one-click. Headers are fetched explicitly because KMail's message-list envelopes omit unsubscribe headers even when they report a loaded header payload. One-click checks run asynchronously, and clicking the action fetches and validates the selected messages again before asking for confirmation. Requests run sequentially after confirmation.
 
 Email opens a composer with the identity and outgoing transport associated with the message's mailbox. The body contains only text explicitly requested by the mailing list and is otherwise empty; KMail's normal template and signature are removed. Malformed mailto: targets are skipped and never open a composer. When Email is available as a fallback, KMail makes a cookie-free HEAD request before opening a web page. HTTP 404, 410, and JSON responses fall through to Email without opening the browser; all other outcomes open the page normally. KMail does not fetch or interpret the page body. These methods require you to finish sending the email or using the website.
 
